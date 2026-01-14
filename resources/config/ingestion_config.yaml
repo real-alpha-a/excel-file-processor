@@ -1,0 +1,99 @@
+# =========================================================
+# GLOBAL CONFIGURATION
+# =========================================================
+global_config:
+  gcp_project_id: "pmtech-excel-processor-sbx"
+  
+  # Default Dataset Locations
+  bq_land_dataset_id: "excel_processor_land"
+  bq_ingest_dataset_id: "excel_processor_ingest"
+  
+  audit:
+    dataset: "excel_processor_land"
+    table: "sales_audit"
+
+  # Default Loading Strategy
+  loading_defaults:
+    write_mode: "WRITE_TRUNCATE"     # Options: WRITE_TRUNCATE, WRITE_APPEND, WRITE_EMPTY
+    continue_on_error: false
+
+  # -------------------------------------------------------
+  # Layer 1: Global Parsing Defaults (Lowest Priority)
+  # -------------------------------------------------------
+  default_parsing_rules:
+    header_row: 0
+    data_start_row: 1
+    trim_whitespace: true
+    treat_as_null: ["N/A", "NULL", "_", "nan"]
+    force_string_cols: [] 
+
+# =========================================================
+# INGESTION JOBS
+# =========================================================
+jobs:
+  - job_id: "sales_excel_ingestion"
+    description: "Ingest sales files to bq"
+    
+    # 1. GCS INPUT SETTINGS
+    gcs_input:
+      bucket: "pmtech-sbx-excel-processor"
+      
+    file_selector:
+      match_type: "name"            # Options: 'name', 'regex'
+      prefix: ""
+      supported_formats: "xlsx"
+      # Fixed regex pattern (assumed \d{4} format based on input text)
+      pattern: "incoming/finance_data/Financial Sample_01-14-2026.xlsx"
+
+    # 2. POST PROCESSING (Lifecycle)
+    post_processing:
+      action: "none"                 # Options: 'archive', 'delete', 'none'
+      archive_path: "archive/finance_data/"   # Only used if action is 'archive'
+
+    # -----------------------------------------------------
+    # Layer 2: Job-Level Rules (Middle Priority)
+    # -----------------------------------------------------
+    job_parsing_rules:
+      header_row: 0
+      data_start_row: 1
+      is_header_missing: false
+
+    # 3. SHEET CONFIGURATION
+    sheets:
+      - sheet_identifier: 0 
+        identifier_type: "index"    
+        land_table: "finance_data_land"
+        ingest_table: "finance_data_ingest"
+       
+         
+
+        # -------------------------------------------------
+        # Layer 3: Sheet-Specific Rules (Highest Priority)
+        # -------------------------------------------------
+        parsing_rules:
+          is_header_missing: false
+          header_row: 0             # Specific to this sheet
+          data_start_row: 1
+          # data_end_row:            # Optional
+          #usecols: "B:M"             # Excel Column Range
+          skip_footer: 0
+
+        # Renaming Columns (Excel Header -> BigQuery Column)
+        column_mapping:
+          "REGION NAME": "region_name_overriden"
+
+        # Schema Definition
+        schema_config:
+          mode: "explicit"           # Options: 'auto_detect', 'explicit'
+    
+          # Default: Empty list [] (Schema will be auto-detected/skipped if empty)
+          fields: []
+
+          # ---------------------------------------------------------
+          # HOW TO USE:
+          # If you want to force types, remove the '[]' above and uncomment below:
+          #
+          # fields:
+          #   - {name: "region_name",   type: "STRING"}
+          #   - {name: "facility_name", type: "STRING"}
+          # ---------------------------------------------------------
