@@ -11,6 +11,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+config = None
+
 class ConfigManager:
     _instance = None
     _config_data = {}
@@ -38,6 +40,8 @@ class ConfigManager:
         """Loads or reloads the YAML configuration file."""
         if not os.path.exists(self.config_path):
             raise FileNotFoundError(f"Configuration file not found at: {self.config_path}")
+        
+        #TODO: validate yaml file before loading
 
         try:
             with open(self.config_path, "r") as f:
@@ -65,6 +69,10 @@ class ConfigManager:
     @property
     def continue_on_error(self) -> bool:
         return self._config_data.get('global_config', {}).get('loading_defaults', {}).get('continue_on_error', False)
+    
+    @property
+    def skip_if_exits(self) -> bool:
+        return self._config_data.get('global_config', {}).get('loading_defaults', {}).get('skip_if_exists', True)
 
     def get_global_bucket(self) -> str:
         # Note: Your YAML structure has bucket inside 'gcs_input' or just global?

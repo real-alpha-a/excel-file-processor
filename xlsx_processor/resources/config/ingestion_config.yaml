@@ -16,6 +16,7 @@ global_config:
   loading_defaults:
     write_mode: "WRITE_TRUNCATE"     # Options: WRITE_TRUNCATE, WRITE_APPEND, WRITE_EMPTY
     continue_on_error: false
+    skip_if_exists: false # Skip already processed file
 
   # -------------------------------------------------------
   # Layer 1: Global Parsing Defaults (Lowest Priority)
@@ -72,6 +73,13 @@ jobs:
         # -------------------------------------------------
         parsing_rules:
           is_header_missing: false
+          group_header:
+            enabled: true
+            rows: [0]
+            separator: "_"              # User defined separator
+            direction: "prefix"          # Options: "prefix" or "postfix"
+            ignore_labels: ["label_1:", "label_2"] # Skip specific text
+            # exclude_ranges: ["A:B", "Z:Z"]    # Skip specific Excel column ranges
           header_row: 0             # Specific to this sheet
           data_start_row: 1
           # data_end_row:            # Optional
